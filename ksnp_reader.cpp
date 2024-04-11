@@ -446,7 +446,8 @@ std::vector<Read_Allele> detect_allele(const char *bam_fn, const std::string &ch
 
 			char op_chr = bam_cigar_opchr(cigar_array[cid]);
 			int que_pos = op_chr == 'D' ?que_pointer - 1 : que_pointer + snp.pos - ref_pointer;
-			auto pair = realign.bit_vector_dp(aln, que_pos, snp.pos - 1, snp.alt);
+			// auto pair = realign.bit_vector_dp(aln, que_pos, snp.pos - 1, snp.alt);
+			auto pair = realign.hamming_distance(aln, que_pos, snp.pos - 1, snp.alt);
 			int allele;
 			if (pair.first < pair.second) allele = 0;
 			else if (pair.first > pair.second) allele = 1;

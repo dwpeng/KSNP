@@ -36,7 +36,7 @@ public:
 	 * @return Pair of edit distance with ref and alt allele.
 	 */
 	std::pair<int, int> bit_vector_dp(const bam1_t *aln, int q_snp, int r_snp, char alt_allele);
-
+	std::pair<int, int> hamming_distance(const bam1_t *aln, int q_snp, int r_snp, char alt_allele);
 	/**
 	 * Compute edit distance between extracted query and reference/alternative sequence.
 	 * Run realignment for alternative sequence to remove reference bias.

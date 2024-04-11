@@ -19,6 +19,44 @@ Realignment::Realignment(int l, const char *r) :gr_len(l), global_ref(r) {
 	ALPHA_TABLE['T'] = ALPHA_TABLE['t'] = 3;
 }
 
+
+std::pair<int, int> Realignment::hamming_distance(const bam1_t *aln, int q_snp,int r_snp, char alt_allele) {
+	const uint8_t *enc_seq = bam_get_seq(aln);
+	int que_l = std::max(q_snp - OVERHANG_LEN, 0); // Query interval [que_l, que_r)
+	int que_r = std::min(q_snp + OVERHANG_LEN + 1, aln->core.l_qseq);
+	int qlen = que_r - que_l;
+	// Extracted reference sequence
+	int ref_l = std::max(r_snp - OVERHANG_LEN, 0);
+	int ref_r = std::min(r_snp + OVERHANG_LEN + 1, gr_len);
+	int rlen = ref_r - ref_l;
+	int minlen = std::min(qlen, rlen);
+	int mask = (1ull << (minlen * 2)) - 1;
+	uint64_t ref, query, alt;
+	for (int i = que_l; i < que_r; i++) {
+		query <<= 2u;
+		query |= (uint64_t)ALPHA_TABLE[seq_nt16_str[bam_seqi(enc_seq, i)]];
+	}
+	for (int i = ref_l; i < ref_r; i++) {
+		ref <<= 2u;
+		ref |= (uint64_t)ALPHA_TABLE[global_ref[i]];
+	}
+	alt = ref;
+	alt &= ~(3llu << (2u * (r_snp - ref_l)));
+	alt |= ((uint64_t)ALPHA_TABLE[alt_allele]) << (2u * (r_snp - ref_l));
+	query &= mask;
+	ref &= mask;
+	alt &= mask;
+	uint64_t s1 = ref ^ query;
+	uint64_t s2 = alt ^ query;
+	s1 = ((s1 & 0xAAAAAAAAAAAAAAAALLU) >> 1u) | (s1 & 0x5555555555555555LLU);
+	s2 = ((s2 & 0xAAAAAAAAAAAAAAAALLU) >> 1u) | (s2 & 0x5555555555555555LLU);
+	int ref_score = __builtin_popcountll(s1);
+	int alt_score = __builtin_popcountll(s2);
+	return std::make_pair(ref_score, alt_score);
+}
+
+
+
 std::pair<int, int> Realignment::bit_vector_dp(const bam1_t *aln, int q_snp, int r_snp, char alt_allele) {
 	// Extracted query sequence
 	const uint8_t *enc_seq = bam_get_seq(aln);
